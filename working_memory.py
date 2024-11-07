@@ -20,10 +20,12 @@ class WorkingMemory(object):
         
         # Generate the random sequence
         self.show_numbers, self.differences = self._generate_number_sequence(n_trials)
-        
         # Initialize windows
         self.window_A = visual.Window(screen=0, size=(1920, 1080), pos=(0, 0), color='black', fullscr=True)
         self.window_B = visual.Window(screen=1, size=(1920, 1080), pos=(0, 0), color='black', fullscr=True)
+        
+        # self.window_A = visual.Window(screen=0, size=(800, 800), pos=(0, 0), color='black', fullscr=False)
+        # self.window_B = visual.Window(screen=0, size=(800, 800), pos=(800, 0), color='black', fullscr=False)
         
         self.time_log_A = []
         self.time_log_B = []
@@ -57,7 +59,7 @@ class WorkingMemory(object):
                 differences.append(D)
                 number += D
             SN.extend(show_numbers)
-            DIFF.extend(D)
+            DIFF.extend(differences)
         return SN, DIFF    
     
     def _show_text(self, i: int, D: int) -> None:
@@ -110,7 +112,8 @@ class WorkingMemory(object):
         
     def pause_function(self, i: int) -> None:
         if i == 0: return
-        if i % self.pause != 0: return
+        # TODO Fix indexing
+        if (i + 1) % self.pause != 0: return 
         
         for t in range(self.pause_time):
             if self.pause_time - t > 5:

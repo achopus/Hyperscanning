@@ -162,6 +162,8 @@ class WorkingMemory(object):
             is_A_active = self.pause_function(is_A_active, i)
         self._save()
         self._close()
+        
+    
 if __name__ == "__main__":
     wm = WorkingMemory(save_folder="wm_out_single", filename="test_file")
     wm.play()
