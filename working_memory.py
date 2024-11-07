@@ -22,8 +22,8 @@ class WorkingMemory(object):
         self.show_numbers, self.differences = self._generate_number_sequence(n_trials)
         
         # Initialize windows
-        self.window_A = visual.Window(screen=0, size=(1920, 1080), pos=(0, 0), color='black')
-        self.window_B = visual.Window(screen=1, size=(1920, 1080), pos=(0, 0), color='black')
+        self.window_A = visual.Window(screen=0, size=(1920, 1080), pos=(0, 0), color='black', fullscr=True)
+        self.window_B = visual.Window(screen=1, size=(1920, 1080), pos=(0, 0), color='black', fullscr=True)
         
         self.time_log_A = []
         self.time_log_B = []
@@ -40,18 +40,25 @@ class WorkingMemory(object):
         core.wait(5)
     
     def _generate_number_sequence(self, n_trials: int) -> tuple[list[int], list[int]]:
-        show_numbers: list[int] = []
-        differences: list[int] = []
-        number = 0
         np.random.seed(0)
-        for _ in range(n_trials):
-            show_numbers.append(number)
-            D = np.random.randint(-number, 10 - number)
-            while D == 0:
+        n_blocks = n_trials // self.pause
+        n_trials_per_block = int(n_trials / n_blocks)
+        SN = []
+        DIFF = []
+        for n in range(n_blocks):
+            number = 0
+            show_numbers: list[int] = []
+            differences: list[int] = []
+            for _ in range(n_trials_per_block):
+                show_numbers.append(number)
                 D = np.random.randint(-number, 10 - number)
-            differences.append(D)
-            number += D
-        return show_numbers, differences    
+                while D == 0:
+                    D = np.random.randint(-number, 10 - number)
+                differences.append(D)
+                number += D
+            SN.extend(show_numbers)
+            DIFF.extend(D)
+        return SN, DIFF    
     
     def _show_text(self, i: int, D: int) -> None:
         if i % 2:
@@ -111,8 +118,8 @@ class WorkingMemory(object):
                 text_A = visual.TextStim(win=self.window_A, text=pause_str.ljust(9), color="white")
                 text_B = visual.TextStim(win=self.window_B, text=pause_str.ljust(9), color="white")
             else:
-                text_A = visual.TextStim(win=self.window_A, text=f"Resuming in {self.pause_time - t}", color="white")
-                text_B = visual.TextStim(win=self.window_B, text=f"Resuming in {self.pause_time - t}", color="white")
+                text_A = visual.TextStim(win=self.window_A, text=f"First number is again 0\nResuming in {self.pause_time - t}", color="white")
+                text_B = visual.TextStim(win=self.window_B, text=f"First number is again 0\nResuming in {self.pause_time - t}", color="white")
             text_A.draw()
             text_B.draw()
             
@@ -129,6 +136,8 @@ class WorkingMemory(object):
             self.pause_function(i)
         self._save()
         self._close()
+        
+
 if __name__ == "__main__":
     wm = WorkingMemory(save_folder="wm_out", filename="test_file")
     wm.play()

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import time
 
 class WorkingMemory(object):
-    def __init__(self, n_trials: int = 120, pause: int = 30, pause_time: int = 15,
+    def __init__(self, n_trials: int = 120, pause: int = 15, pause_time: int = 15,
                  save_folder: str = "out", filename: str = "default_filename") -> None:
 
         # Experiment design
@@ -22,9 +22,10 @@ class WorkingMemory(object):
         self.show_numbers, self.differences = self._generate_number_sequence(n_trials)
         
         # Initialize windows
-        self.window_A = visual.Window(size=(1920, 1080), pos=(0, 0), color='black', fullscr=True)
-        
+        self.window_A = visual.Window(size=(1920, 1080), pos=(0, 0), color='black', fullscr=True, screen=0)
+        self.window_B = visual.Window(size=(1920, 1080), pos=(0, 0), color='black', fullscr=True, screen=1)
         self.time_log_A = []
+        self.time_log_B = []
         
         self._show_init_prompt()
     
@@ -32,6 +33,9 @@ class WorkingMemory(object):
         text_A = visual.TextStim(win=self.window_A, text="Calculate the result and enter the corresponding number [0-9]", color="white")
         text_A.draw()
         self.window_A.flip()
+        text_B = visual.TextStim(win=self.window_B, text="Calculate the result and enter the corresponding number [0-9]", color="white")
+        text_B.draw()
+        self.window_B.flip()
         core.wait(5)
     
     def _generate_number_sequence(self, n_trials: int) -> tuple[list[int], list[int]]:
@@ -46,24 +50,47 @@ class WorkingMemory(object):
             show_numbers.append(N)
             differences.append(D)
         return show_numbers, differences    
-    
-    def _show_text(self, i: int, N: int, D: int) -> None:
-        text = visual.TextStim(win=self.window_A, text=f"{N}", color="yellow")
-        text.draw()
-        self.window_A.flip()
-        core.wait(0.75)
-        text = visual.TextStim(win=self.window_A, text=f"", color="yellow")
-        text.draw()
-        self.window_A.flip()
-        core.wait(0.25)
-        text = visual.TextStim(win=self.window_A, text=f"{D:+d}", color="white")
-        text.draw()
-        self.window_A.flip()
-        
-    def _log(self, i: int, time_start: float) -> None:
-        self.time_log_A.append(time.time() - time_start)
+
+    def _show_text(self, is_A_active: bool, N: int, D: int) -> None:
+        if is_A_active:
+            text = visual.TextStim(win=self.window_B, text="Wait", color="white")
+            text.draw()
+            self.window_B.flip()
+            text = visual.TextStim(win=self.window_A, text=f"{N}", color="yellow")
+            text.draw()
+            self.window_A.flip()
+            core.wait(0.75)
+            text = visual.TextStim(win=self.window_A, text=f"", color="yellow")
+            text.draw()
+            self.window_A.flip()
+            core.wait(0.25)
+            text = visual.TextStim(win=self.window_A, text=f"{D:+d}", color="white")
+            text.draw()
+            self.window_A.flip()
+        else:
+            text = visual.TextStim(win=self.window_A, text="Wait", color="white")
+            text.draw()
+            self.window_A.flip()
+            text = visual.TextStim(win=self.window_B, text=f"{N}", color="yellow")
+            text.draw()
+            self.window_B.flip()
+            core.wait(0.75)
+            text = visual.TextStim(win=self.window_B, text=f"", color="yellow")
+            text.draw()
+            self.window_B.flip()
+            core.wait(0.25)
+            text = visual.TextStim(win=self.window_B, text=f"{D:+d}", color="white")
+            text.draw()
+            self.window_B.flip()
             
-    def _wait_press(self, i: int, time_start: float) -> None:
+        
+    def _log(self, is_A_active: bool, time_start: float) -> None:
+        if is_A_active:
+            self.time_log_A.append(time.time() - time_start)
+        else:
+            self.time_log_B.append(time.time() - time_start)
+            
+    def _wait_press(self, is_A_active: bool, time_start: float) -> None:
         keys_num = [str(i) for i in range(10)]
         keys_num.extend([f"num_{k}" for k in keys_num])
         while True:
@@ -73,10 +100,11 @@ class WorkingMemory(object):
                     core.quit()
                 elif keys[0] in keys_num:
                     break
-        self._log(i, time_start)
+        self._log(is_A_active, time_start)
         
     def _close(self) -> None:
         self.window_A.close()
+        self.window_B.close()
         core.quit()
         
     def _save(self) -> None:
@@ -86,39 +114,52 @@ class WorkingMemory(object):
         
         with open(filepath, mode="w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["Times"])
-            for tA, tB in zip(self.time_log_A):
+            writer.writerow(["Times_A", "Times_B"])
+            for tA, tB in zip(self.time_log_A, self.time_log_B):
                 writer.writerow([tA, tB])
         
+
+    def pause_function(self, is_A_active: bool, i: int) -> bool:
+        if i == 0: return is_A_active
+        if i % self.pause != 0: return is_A_active
         
-    def pause_function(self, i: int) -> None:
-        if i == 0: return
-        if i % self.pause != 0: return
-        
-        for t in range(self.pause_time):
-            if self.pause_time - t > 5:
-                pause_str = "Pause" + t % 4 * "."
-                text_A = visual.TextStim(win=self.window_A, text=pause_str.ljust(9), color="white")
-            else:
-                text_A = visual.TextStim(win=self.window_A, text=f"Resuming in {self.pause_time - t}", color="white")
-            text_A.draw()
-            
+        if is_A_active:
+            text = visual.TextStim(win=self.window_A, text="Wait", color="white")
+            text.draw()
             self.window_A.flip()
-            if t < self.pause_time - 1:
-                core.wait(1) 
+            text = visual.TextStim(win=self.window_B, text="", color="white")
+            text.draw()
+            self.window_B.flip()
+            is_A_active = False
+        else:
+            text = visual.TextStim(win=self.window_B, text="Wait", color="white")
+            text.draw()
+            self.window_B.flip()
+            text = visual.TextStim(win=self.window_A, text="", color="white")
+            text.draw()
+            self.window_A.flip()
+            is_A_active = True
+        
+        return is_A_active
     
     def play(self) -> None:
         time_start = time.time()
+        is_A_active = True
         for i, (N, D) in enumerate(zip(self.show_numbers, self.differences)):
-            self._show_text(i, N, D)
+            self._show_text(is_A_active, N, D)
             ti = time.time()
-            self._wait_press(i, time_start)
-            text_A = visual.TextStim(win=self.window_A, text="", color="white")
-            text_A.draw()
-            self.window_A.flip()
+            self._wait_press(is_A_active, time_start)
+            if is_A_active:
+                text_A = visual.TextStim(win=self.window_A, text="", color="white")
+                text_A.draw()
+                self.window_A.flip()
+            else:
+                text_B = visual.TextStim(win=self.window_B, text="", color="white")
+                text_B.draw()
+                self.window_B.flip()
             # Simulate partner wait time
             core.wait(min(time.time() - ti, 2))
-            self.pause_function(i)
+            is_A_active = self.pause_function(is_A_active, i)
         self._save()
         self._close()
 if __name__ == "__main__":
