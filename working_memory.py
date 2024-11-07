@@ -22,8 +22,8 @@ class WorkingMemory(object):
         self.show_numbers, self.differences = self._generate_number_sequence(n_trials)
         
         # Initialize windows
-        self.window_A = visual.Window(size=(800, 600), pos=(0, 0), color='black')
-        self.window_B = visual.Window(size=(800, 600), pos=(800, 0), color='black')
+        self.window_A = visual.Window(screen=0, size=(1920, 1080), pos=(0, 0), color='black')
+        self.window_B = visual.Window(screen=1, size=(1920, 1080), pos=(0, 0), color='black')
         
         self.time_log_A = []
         self.time_log_B = []
@@ -73,10 +73,15 @@ class WorkingMemory(object):
             self.time_log_B.append(time.time() - time_start)
             
     def _wait_press(self, i: int, time_start: float) -> None:
-        if i % 2 == 0:
-            event.waitKeys(keyList="l")
-        else:
-            event.waitKeys(keyList="a")
+        while True:
+            keys = event.getKeys()
+            if keys:
+                if keys[0] == 'q':
+                    core.quit()
+                if i % 2 == 0 and keys[0] == "l":
+                    break
+                elif i % 2 == 1 and keys[0] == "a":
+                    break
         self._log(i, time_start)
     
     def _close(self) -> None:

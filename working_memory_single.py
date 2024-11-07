@@ -22,7 +22,7 @@ class WorkingMemory(object):
         self.show_numbers, self.differences = self._generate_number_sequence(n_trials)
         
         # Initialize windows
-        self.window_A = visual.Window(size=(800, 600), pos=(0, 0), color='black')
+        self.window_A = visual.Window(size=(1920, 1080), pos=(0, 0), color='black', fullscr=True)
         
         self.time_log_A = []
         
@@ -40,7 +40,9 @@ class WorkingMemory(object):
         np.random.seed(0)
         for _ in range(n_trials):
             N = np.random.randint(0, 10)
-            D = np.random.randint(-N, 9-N)
+            while True:
+                D = np.random.randint(-N, 9-N)
+                if D != 0: break
             show_numbers.append(N)
             differences.append(D)
         return show_numbers, differences    
@@ -62,9 +64,15 @@ class WorkingMemory(object):
         self.time_log_A.append(time.time() - time_start)
             
     def _wait_press(self, i: int, time_start: float) -> None:
-        keys = [str(i) for i in range(10)]
-        keys.extend([f"num_{k}" for k in keys])
-        event.waitKeys(keyList=keys)
+        keys_num = [str(i) for i in range(10)]
+        keys_num.extend([f"num_{k}" for k in keys_num])
+        while True:
+            keys = event.getKeys()
+            if keys:
+                if keys[0] == 'q':
+                    core.quit()
+                elif keys[0] in keys_num:
+                    break
         self._log(i, time_start)
         
     def _close(self) -> None:
@@ -105,8 +113,11 @@ class WorkingMemory(object):
             self._show_text(i, N, D)
             ti = time.time()
             self._wait_press(i, time_start)
+            text_A = visual.TextStim(win=self.window_A, text="", color="white")
+            text_A.draw()
+            self.window_A.flip()
             # Simulate partner wait time
-            core.wait(time.time() - ti)
+            core.wait(min(time.time() - ti, 2))
             self.pause_function(i)
         self._save()
         self._close()
