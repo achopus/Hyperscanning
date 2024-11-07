@@ -23,65 +23,52 @@ class WorkingMemory(object):
         
         # Initialize windows
         self.window_A = visual.Window(size=(800, 600), pos=(0, 0), color='black')
-        self.window_B = visual.Window(size=(800, 600), pos=(800, 0), color='black')
         
         self.time_log_A = []
-        self.time_log_B = []
         
         self._show_init_prompt()
     
     def _show_init_prompt(self) -> None:
-        text_A = visual.TextStim(win=self.window_A, text="Say the result of the calculation, based on the difference. First number is 0. You go first. Press 'a'  when you have the answer.", color="white")
-        text_B = visual.TextStim(win=self.window_B, text="Say the result of the calculation, based on the difference. First number is 0. You go second. Press 'l' when you have the answer.", color="white")
+        text_A = visual.TextStim(win=self.window_A, text="Calculate the result and enter the corresponding number [0-9]", color="white")
         text_A.draw()
-        text_B.draw()
         self.window_A.flip()
-        self.window_B.flip()
         core.wait(5)
     
     def _generate_number_sequence(self, n_trials: int) -> tuple[list[int], list[int]]:
         show_numbers: list[int] = []
         differences: list[int] = []
-        number = 0
         np.random.seed(0)
         for _ in range(n_trials):
-            show_numbers.append(number)
-            D = np.random.randint(-number, 10 - number)
-            while D == 0:
-                D = np.random.randint(-number, 10 - number)
+            N = np.random.randint(0, 10)
+            D = np.random.randint(-N, 9-N)
+            show_numbers.append(N)
             differences.append(D)
-            number += D
         return show_numbers, differences    
     
-    def _show_text(self, i: int, D: int) -> None:
-        if i % 2:
-            text_A = visual.TextStim(win=self.window_A, text=f"{D:+d}", color="white")
-            text_B = visual.TextStim(win=self.window_B, text="", color="white")
-        else:
-            text_A = visual.TextStim(win=self.window_A, text="", color="white")
-            text_B = visual.TextStim(win=self.window_B, text=f"{D:+d}", color="white")
-        
-        text_A.draw()
-        text_B.draw()
+    def _show_text(self, i: int, N: int, D: int) -> None:
+        text = visual.TextStim(win=self.window_A, text=f"{N}", color="yellow")
+        text.draw()
         self.window_A.flip()
-        self.window_B.flip()
-    
+        core.wait(0.75)
+        text = visual.TextStim(win=self.window_A, text=f"", color="yellow")
+        text.draw()
+        self.window_A.flip()
+        core.wait(0.25)
+        text = visual.TextStim(win=self.window_A, text=f"{D:+d}", color="white")
+        text.draw()
+        self.window_A.flip()
+        
     def _log(self, i: int, time_start: float) -> None:
-        if i % 2 == 0:
-            self.time_log_A.append(time.time() - time_start)
-        else:
-            self.time_log_B.append(time.time() - time_start)
+        self.time_log_A.append(time.time() - time_start)
             
     def _wait_press(self, i: int, time_start: float) -> None:
-        if i % 2 == 0:
-            event.waitKeys(keyList="l")
-        else:
-            event.waitKeys(keyList="a")
+        keys = [str(i) for i in range(10)]
+        keys.extend([f"num_{k}" for k in keys])
+        event.waitKeys(keyList=keys)
         self._log(i, time_start)
-    
+        
     def _close(self) -> None:
         self.window_A.close()
-        self.window_B.close()
         core.quit()
         
     def _save(self) -> None:
@@ -91,8 +78,8 @@ class WorkingMemory(object):
         
         with open(filepath, mode="w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["Times_A", "Times_B"])
-            for tA, tB in zip(self.time_log_A, self.time_log_B):
+            writer.writerow(["Times"])
+            for tA, tB in zip(self.time_log_A):
                 writer.writerow([tA, tB])
         
         
@@ -104,26 +91,25 @@ class WorkingMemory(object):
             if self.pause_time - t > 5:
                 pause_str = "Pause" + t % 4 * "."
                 text_A = visual.TextStim(win=self.window_A, text=pause_str.ljust(9), color="white")
-                text_B = visual.TextStim(win=self.window_B, text=pause_str.ljust(9), color="white")
             else:
                 text_A = visual.TextStim(win=self.window_A, text=f"Resuming in {self.pause_time - t}", color="white")
-                text_B = visual.TextStim(win=self.window_B, text=f"Resuming in {self.pause_time - t}", color="white")
             text_A.draw()
-            text_B.draw()
             
             self.window_A.flip()
-            self.window_B.flip()
             if t < self.pause_time - 1:
                 core.wait(1) 
     
     def play(self) -> None:
         time_start = time.time()
-        for i, D in enumerate(self.differences):
-            self._show_text(i, D)
+        for i, (N, D) in enumerate(zip(self.show_numbers, self.differences)):
+            self._show_text(i, N, D)
+            ti = time.time()
             self._wait_press(i, time_start)
+            # Simulate partner wait time
+            core.wait(time.time() - ti)
             self.pause_function(i)
         self._save()
         self._close()
 if __name__ == "__main__":
-    wm = WorkingMemory(save_folder="wm_out", filename="test_file")
+    wm = WorkingMemory(save_folder="wm_out_single", filename="test_file")
     wm.play()
