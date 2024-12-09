@@ -121,7 +121,7 @@ class WorkingMemory(object):
 
     def pause_function(self, is_A_active: bool, i: int) -> bool:
         if i == 0: return is_A_active
-        if i % self.pause != 0: return is_A_active
+        if (i + 1) % self.pause != 0: return is_A_active
         
         if is_A_active:
             text = visual.TextStim(win=self.window_A, text="Wait", color="white")
@@ -160,6 +160,7 @@ class WorkingMemory(object):
             # Simulate partner wait time
             core.wait(min(time.time() - ti, 2))
             is_A_active = self.pause_function(is_A_active, i)
+
         self._save()
         self._close()
         
